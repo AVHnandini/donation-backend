@@ -13,23 +13,41 @@ dotenv.config({
   path: path.join(__dirname, ".env"),
 });
 
-// Test ENV load
-console.log("Loaded KEY:", process.env.RAZORPAY_KEY_ID);
+console.log("✓ Environment loaded");
+console.log("✓ RAZORPAY_KEY_ID:", process.env.RAZORPAY_KEY_ID);
 
 const app = express();
 app.use(cors());
 app.use(express.json());
 
+console.log("✓ Middleware configured");
+
 // Routes - import AFTER dotenv is loaded
-import paymentRoutes from "./routes/payment.js";
-app.use("/payment", paymentRoutes);
+import("./routes/payment.js")
+  .then(module => {
+    const paymentRoutes = module.default;
+    app.use("/payment", paymentRoutes);
+    console.log("✓ Payment routes loaded");
+  })
+  .catch(err => {
+    console.error("✗ Error loading payment routes:", err.message);
+  });
 
 app.get("/", (req, res) => {
-  res.send("Donation Platform Backend Running");
+  res.json({ status: "✓ Backend server is running on port " + PORT });
 });
 
 // Start Server
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
+const server = app.listen(PORT, "0.0.0.0", () => {
+  console.log(`✓ Server running on http://0.0.0.0:${PORT}`);
+  console.log(`✓ Test endpoint: http://localhost:${PORT}/`);
+});
+
+server.on("error", (err) => {
+  if (err.code === "EADDRINUSE") {
+    console.error(`✗ Port ${PORT} is already in use. Kill the existing process and try again.`);
+    process.exit(1);
+  }
+  throw err;
 });
